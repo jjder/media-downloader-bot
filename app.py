@@ -52,7 +52,7 @@ def handle_link(message):
 
     user_links[message.chat.id] = url
 
-    # Original Video and MP3 Audio buttons
+    # Action Buttons: Original Video and MP3 Audio
     markup = InlineKeyboardMarkup()
     btn_original = InlineKeyboardButton("🎬 Original Video", callback_data="original")
     btn_mp3 = InlineKeyboardButton("🎵 MP3 Audio", callback_data="mp3")
@@ -76,6 +76,7 @@ def process_download(call):
     choice = call.data
     output_template = f"/tmp/{chat_id}_%(id)s.%(ext)s"
 
+    # Multi-platform universal options (YouTube, Instagram, Facebook)
     common_opts = {
         'outtmpl': output_template,
         'quiet': True,
@@ -83,16 +84,24 @@ def process_download(call):
         'geo_bypass': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['mweb', 'android', 'tv'],
-                'skip': ['hls', 'dash']
+                'player_client': ['tv_embedded', 'web_creator', 'android'],
+                'player_skip': ['webpage', 'configs']
+            },
+            'instagram': {
+                'api_url': 'graphql'
+            },
+            'facebook': {
+                'fix_subtitles': True
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
+            'Sec-Fetch-Mode': 'navigate',
         }
     }
 
+    # Use cookies.txt if available
     if os.path.exists("cookies.txt"):
         common_opts['cookiefile'] = 'cookies.txt'
 
@@ -111,7 +120,8 @@ def process_download(call):
         status_text = "⏳ Downloading Original Video..."
         ydl_opts = {
             **common_opts,
-            'format': 'best/bestvideo+bestaudio',
+            'format': 'bestvideo+bestaudio/best',
+            'merge_output_format': 'mp4',
         }
 
     bot.edit_message_text(status_text, chat_id=chat_id, message_id=call.message.message_id)
