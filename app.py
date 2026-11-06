@@ -5,14 +5,13 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from yt_dlp import YoutubeDL
 
-# Bot Token & Webhook URL configuration
+# Bot Token & Webhook URL
 TOKEN = os.environ.get("BOT_TOKEN", "9284967785:AAG5zzD1swVFRVD-JowIU3gx3PPF1XND9XY")
 WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL", "")
 
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN, threaded=False)
 app = Flask(__name__)
 
-# Temporary store for links mapped by chat ID
 user_links = {}
 
 @app.route(f"/{TOKEN}", methods=['POST'])
@@ -26,7 +25,17 @@ def webhook():
 
 @app.route('/')
 def home():
-    return "Bot Server is Running Live!", 200
+    return "Bot Server is Live and Running!", 200
+
+# Webhook manually trigger/check karva mate
+@app.route('/set_webhook')
+def setup_webhook():
+    if WEBHOOK_URL:
+        target_url = f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}"
+        bot.remove_webhook()
+        success = bot.set_webhook(url=target_url)
+        return f"Webhook status: {success} -> {target_url}", 200
+    return "RENDER_EXTERNAL_URL not found", 400
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -44,7 +53,6 @@ def handle_link(message):
 
     user_links[message.chat.id] = url
 
-    # Quality selection buttons
     markup = InlineKeyboardMarkup()
     btn_best = InlineKeyboardButton("🎬 Best Video", callback_data="best")
     btn_720 = InlineKeyboardButton("🎥 720p Video", callback_data="720")
@@ -71,7 +79,6 @@ def process_download(call):
     quality = call.data
     output_template = f"/tmp/{chat_id}_%(id)s.%(ext)s"
 
-    # Base options with cookiefile support and headers
     common_opts = {
         'outtmpl': output_template,
         'quiet': True,
@@ -83,14 +90,86 @@ def process_download(call):
         }
     }
 
-    # Attach cookies if available in the directory
     if os.path.exists("cookies.txt"):
         common_opts['cookiefile'] = 'cookies.txt'
 
-    # Format selection with reliable fallbacks to avoid "format not available" error
     if quality == "mp3":
         status_text = "⏳ Downloading and converting to MP3 audio..."
         ydl_opts = {
             **common_opts,
             'format': 'ba/b',
             'postprocessors': [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': '192',
+            }],
+        }
+    elif quality == "best":
+        status_text = "⏳ Downloading in Best Available Quality..."
+        ydl_opts = {
+            **common_opts,
+            'format': 'bv*+ba/b',
+            'merge_output_format': 'mp4',
+        }
+    else:  # 720p
+        status_text = "⏳ Downloading in 720p Quality..."
+        ydl_opts = {
+            **common_opts,
+            'format': 'bv*[height<=720]+ba/b[height<=720]/bv*+ba/b',
+            'merge_output_format': 'mp4',
+        }
+
+    bot.edit_message_text(status_text, chat_id=chat_id, message_id=call.message.message_id)
+
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+
+        files = glob.glob(f"/tmp/{chat_id}_*")
+        if not files:
+            bot.edit_message_text(
+                "❌ Download failed. The video might be private or blocked.",
+                chat_id=chat_id,
+                message_id=call.message.message_id
+            )
+            return
+
+        file_path = files[0]
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+
+        if file_size_mb > 50:
+            bot.edit_message_text(
+                f"⚠️ File size is {file_size_mb:.2f} MB. Telegram Bot API limits uploads to 50 MB.",
+                chat_id=chat_id,
+                message_id=call.message.message_id
+            )
+        else:
+            bot.edit_message_text("📤 Uploading media to Telegram...", chat_id=chat_id, message_id=call.message.message_id)
+            with open(file_path, 'rb') as media_file:
+                if quality == "mp3":
+                    bot.send_audio(chat_id, media_file, timeout=240)
+                else:
+                    bot.send_video(chat_id, media_file, timeout=240)
+            bot.delete_message(chat_id=chat_id, message_id=call.message.message_id)
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    except Exception as e:
+        bot.edit_message_text(f"Error: {str(e)[:160]}", chat_id=chat_id, message_id=call.message.message_id)
+        for f in glob.glob(f"/tmp/{chat_id}_*"):
+            if os.path.exists(f):
+                os.remove(f)
+
+# Auto-set webhook safely on boot
+if WEBHOOK_URL:
+    try:
+        bot.remove_webhook()
+        bot.set_webhook(url=f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}")
+        print("Webhook registered successfully!")
+    except Exception as err:
+        print(f"Webhook setup warning: {err}")
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
