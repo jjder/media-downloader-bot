@@ -1,4 +1,4 @@
 pyTelegramBotAPI
-yt-dlp[default]
+yt-dlp
 Flask
-gunicorn
+requests
