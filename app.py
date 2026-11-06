@@ -5,7 +5,6 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from yt_dlp import YoutubeDL
 
-# Bot Token & Webhook URL
 TOKEN = os.environ.get("BOT_TOKEN", "9284967785:AAG5zzD1swVFRVD-JowIU3gx3PPF1XND9XY")
 WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL", "")
 
@@ -52,7 +51,6 @@ def handle_link(message):
 
     user_links[message.chat.id] = url
 
-    # માત્ર ઓરિજિનલ વિડિયો અને MP3 બે જ બટન
     markup = InlineKeyboardMarkup()
     btn_original = InlineKeyboardButton("🎬 Original Video", callback_data="original")
     btn_mp3 = InlineKeyboardButton("🎵 MP3 Audio", callback_data="mp3")
@@ -82,6 +80,11 @@ def process_download(call):
         'quiet': True,
         'no_warnings': True,
         'geo_bypass': True,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web']
+            }
+        },
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
@@ -95,14 +98,14 @@ def process_download(call):
         status_text = "⏳ Downloading and converting to MP3 audio..."
         ydl_opts = {
             **common_opts,
-            'format': 'bestaudio/best',
+            'format': 'ba/b',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
         }
-    else:  # Original Video (જેવી ઉપલબ્ધ હોય તેવી ઓરિજિનલ સાઈઝ)
+    else:
         status_text = "⏳ Downloading Original Video..."
         ydl_opts = {
             **common_opts,
