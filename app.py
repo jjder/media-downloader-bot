@@ -12,7 +12,6 @@ WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL", "")
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# Temporary in-memory store for links
 user_links = {}
 
 @app.route(f"/{TOKEN}", methods=['POST'])
@@ -42,10 +41,8 @@ def handle_link(message):
         bot.reply_to(message, "⚠️ Please send a valid video URL.")
         return
 
-    # Store link mapped to chat ID
     user_links[message.chat.id] = url
 
-    # Inline quality options
     markup = InlineKeyboardMarkup()
     btn_best = InlineKeyboardButton("🎬 Best Video", callback_data="best")
     btn_720 = InlineKeyboardButton("🎥 720p Video", callback_data="720")
@@ -72,20 +69,15 @@ def process_download(call):
     quality = call.data
     output_template = f"/tmp/{chat_id}_%(id)s.%(ext)s"
 
-    # YouTube anti-bot bypass without cookies (Using iOS client and mobile agent)
+    # YouTube anti-bot configuration using exported cookies
     common_opts = {
         'outtmpl': output_template,
         'quiet': True,
         'no_warnings': True,
         'geo_bypass': True,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['ios', 'mweb'],
-                'skip': ['hls', 'dash']
-            }
-        },
+        'cookiefile': 'cookies.txt',  # uses your uploaded cookies file
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
         }
     }
@@ -149,7 +141,6 @@ def process_download(call):
                     bot.send_video(chat_id, media_file, timeout=240)
             bot.delete_message(chat_id=chat_id, message_id=call.message.message_id)
 
-        # Cleanup downloaded file
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -159,7 +150,7 @@ def process_download(call):
             if os.path.exists(f):
                 os.remove(f)
 
-# Configure Telegram Webhook if running on Render
+# Configure Telegram Webhook
 if WEBHOOK_URL:
     bot.remove_webhook()
     bot.set_webhook(url=f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}")
