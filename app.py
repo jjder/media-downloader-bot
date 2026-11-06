@@ -72,7 +72,7 @@ def process_download(call):
     quality = call.data
     output_template = f"/tmp/{chat_id}_%(id)s.%(ext)s"
 
-    # YouTube anti-bot bypass & headers configuration
+    # YouTube anti-bot bypass without cookies (Using iOS client and mobile agent)
     common_opts = {
         'outtmpl': output_template,
         'quiet': True,
@@ -80,11 +80,12 @@ def process_download(call):
         'geo_bypass': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'web']
+                'player_client': ['ios', 'mweb'],
+                'skip': ['hls', 'dash']
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
             'Accept-Language': 'en-US,en;q=0.9',
         }
     }
