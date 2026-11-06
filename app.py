@@ -27,7 +27,6 @@ def webhook():
 def home():
     return "Bot Server is Live and Running!", 200
 
-# Webhook manually trigger/check karva mate
 @app.route('/set_webhook')
 def setup_webhook():
     if WEBHOOK_URL:
@@ -53,15 +52,14 @@ def handle_link(message):
 
     user_links[message.chat.id] = url
 
+    # માત્ર ઓરિજિનલ વિડિયો અને MP3 બે જ બટન
     markup = InlineKeyboardMarkup()
-    btn_best = InlineKeyboardButton("🎬 Best Video", callback_data="best")
-    btn_720 = InlineKeyboardButton("🎥 720p Video", callback_data="720")
+    btn_original = InlineKeyboardButton("🎬 Original Video", callback_data="original")
     btn_mp3 = InlineKeyboardButton("🎵 MP3 Audio", callback_data="mp3")
     
-    markup.row(btn_best, btn_720)
-    markup.row(btn_mp3)
+    markup.row(btn_original, btn_mp3)
 
-    bot.reply_to(message, "Choose your download format:", reply_markup=markup)
+    bot.reply_to(message, "Choose format:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: True)
 def process_download(call):
@@ -76,7 +74,7 @@ def process_download(call):
         )
         return
 
-    quality = call.data
+    choice = call.data
     output_template = f"/tmp/{chat_id}_%(id)s.%(ext)s"
 
     common_opts = {
@@ -93,30 +91,22 @@ def process_download(call):
     if os.path.exists("cookies.txt"):
         common_opts['cookiefile'] = 'cookies.txt'
 
-    if quality == "mp3":
+    if choice == "mp3":
         status_text = "⏳ Downloading and converting to MP3 audio..."
         ydl_opts = {
             **common_opts,
-            'format': 'ba/b',
+            'format': 'bestaudio/best',
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }],
         }
-    elif quality == "best":
-        status_text = "⏳ Downloading in Best Available Quality..."
+    else:  # Original Video (જેવી ઉપલબ્ધ હોય તેવી ઓરિજિનલ સાઈઝ)
+        status_text = "⏳ Downloading Original Video..."
         ydl_opts = {
             **common_opts,
-            'format': 'bv*+ba/b',
-            'merge_output_format': 'mp4',
-        }
-    else:  # 720p
-        status_text = "⏳ Downloading in 720p Quality..."
-        ydl_opts = {
-            **common_opts,
-            'format': 'bv*[height<=720]+ba/b[height<=720]/bv*+ba/b',
-            'merge_output_format': 'mp4',
+            'format': 'best/bestvideo+bestaudio',
         }
 
     bot.edit_message_text(status_text, chat_id=chat_id, message_id=call.message.message_id)
@@ -146,7 +136,7 @@ def process_download(call):
         else:
             bot.edit_message_text("📤 Uploading media to Telegram...", chat_id=chat_id, message_id=call.message.message_id)
             with open(file_path, 'rb') as media_file:
-                if quality == "mp3":
+                if choice == "mp3":
                     bot.send_audio(chat_id, media_file, timeout=240)
                 else:
                     bot.send_video(chat_id, media_file, timeout=240)
