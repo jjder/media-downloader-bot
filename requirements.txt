@@ -1,4 +1,4 @@
 pyTelegramBotAPI
-git+https://github.com/yt-dlp/yt-dlp.git@master
+yt-dlp[default]
 Flask
 gunicorn
