@@ -5,7 +5,6 @@ import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from yt_dlp import YoutubeDL
 
-# Bot Token & Webhook URL
 TOKEN = os.environ.get("BOT_TOKEN", "9284967785:AAG5zzD1swVFRVD-JowIU3gx3PPF1XND9XY")
 WEBHOOK_URL = os.environ.get("RENDER_EXTERNAL_URL", "")
 
@@ -34,7 +33,7 @@ def setup_webhook():
         bot.remove_webhook()
         success = bot.set_webhook(url=target_url)
         return f"Webhook status: {success} -> {target_url}", 200
-    return "RENDER_EXTERNAL_URL not found", 400
+    return "RENDER_EXTERNAL_URL is not set", 400
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
@@ -52,11 +51,9 @@ def handle_link(message):
 
     user_links[message.chat.id] = url
 
-    # Original Video અને MP3 Audio ના બટન
     markup = InlineKeyboardMarkup()
     btn_original = InlineKeyboardButton("🎬 Original Video", callback_data="original")
     btn_mp3 = InlineKeyboardButton("🎵 MP3 Audio", callback_data="mp3")
-    
     markup.row(btn_original, btn_mp3)
 
     bot.reply_to(message, "Choose format:", reply_markup=markup)
@@ -78,60 +75,4 @@ def process_download(call):
     output_template = f"/tmp/{chat_id}_%(id)s.%(ext)s"
 
     common_opts = {
-        'outtmpl': output_template,
-        'quiet': True,
-        'no_warnings': True,
-        'geo_bypass': True,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['web', 'android'],
-                'skip': ['hls', 'dash']
-            }
-        },
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9',
-        }
-    }
-
-    # જો cookies.txt હાજર હોય તો ઉપયોગ કરવો
-    if os.path.exists("cookies.txt"):
-        common_opts['cookiefile'] = 'cookies.txt'
-
-    if choice == "mp3":
-        status_text = "⏳ Downloading and converting to MP3 audio..."
-        ydl_opts = {
-            **common_opts,
-            'format': 'ba/b',
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '192',
-            }],
-        }
-    else:
-        status_text = "⏳ Downloading Original Video..."
-        ydl_opts = {
-            **common_opts,
-            'format': 'best/bestvideo+bestaudio',
-        }
-
-    bot.edit_message_text(status_text, chat_id=chat_id, message_id=call.message.message_id)
-
-    try:
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-
-        files = glob.glob(f"/tmp/{chat_id}_*")
-        if not files:
-            bot.edit_message_text(
-                "❌ Download failed. The video might be private or blocked.",
-                chat_id=chat_id,
-                message_id=call.message.message_id
-            )
-            return
-
-        file_path = files[0]
-        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-
-        if file_size_mb > 5
+        '
