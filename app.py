@@ -69,13 +69,12 @@ def process_download(call):
     quality = call.data
     output_template = f"/tmp/{chat_id}_%(id)s.%(ext)s"
 
-    # YouTube anti-bot configuration using exported cookies
     common_opts = {
         'outtmpl': output_template,
         'quiet': True,
         'no_warnings': True,
         'geo_bypass': True,
-        'cookiefile': 'cookies.txt',  # uses your uploaded cookies file
+        'cookiefile': 'cookies.txt',
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
@@ -97,14 +96,14 @@ def process_download(call):
         status_text = "⏳ Downloading in Best Available Quality..."
         ydl_opts = {
             **common_opts,
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+            'format': 'bestvideo+bestaudio/best',
             'merge_output_format': 'mp4',
         }
     else:  # 720p
         status_text = "⏳ Downloading in 720p Quality..."
         ydl_opts = {
             **common_opts,
-            'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best',
+            'format': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
             'merge_output_format': 'mp4',
         }
 
