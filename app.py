@@ -52,7 +52,7 @@ def handle_link(message):
 
     user_links[message.chat.id] = url
 
-    # Original Video અને MP3 Audio ના બટન
+    # Original Video and MP3 Audio buttons
     markup = InlineKeyboardMarkup()
     btn_original = InlineKeyboardButton("🎬 Original Video", callback_data="original")
     btn_mp3 = InlineKeyboardButton("🎵 MP3 Audio", callback_data="mp3")
@@ -83,12 +83,12 @@ def process_download(call):
         'geo_bypass': True,
         'extractor_args': {
             'youtube': {
-                'player_client': ['web', 'android'],
+                'player_client': ['mweb', 'android', 'tv'],
                 'skip': ['hls', 'dash']
             }
         },
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
         }
     }
